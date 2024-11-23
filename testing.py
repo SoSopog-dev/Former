@@ -18,7 +18,15 @@ def reset():
     return grid
 
 def main():
+    grid = reset()
 
+    visited = []
+    visited.append((grid, (1,1)))
+
+    if (1,1) in visited:
+        print("Helo")
+
+    """
     grids = [reset() for i in range(10**7)]
     grid = reset()
 
@@ -34,7 +42,7 @@ def main():
     end_old = time.time() - start_old
 
     print(f"New function time:{end_new}, old function time: {end_old}")
-
+    """
 
 if __name__ == "__main__":
     main()

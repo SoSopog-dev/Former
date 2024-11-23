@@ -157,9 +157,12 @@ def main():
     print("Initial game state:")
     print(original_state)
 
-    #action = (int(input()), int(input()))
-    #new_state, done = game.step(action)
+    while True:
+        action = (int(input()), int(input()))
+        new_state, done = game.step(action)
+        print(new_state)
 
+    """
     #games = [([move, move,...], grid)]
 
     shortest_game = 15
@@ -180,7 +183,7 @@ def main():
 
     print(time_states, time_solution)
     #game.reset(original_state)
-    """
+
     for move in current_solution:
         print(game.grid[move[0],move[1]])
 
@@ -188,6 +191,7 @@ def main():
         
 
         print("\n",move,"\n", new_state,done, "\n")
+
     """
     
  
