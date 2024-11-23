@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class FormerGame:
     def __init__(self,grid, grid_size, num_symbols):
@@ -79,7 +80,7 @@ def find_unique_moves(game):
 
     return moves
 
-def get_states(current_state, game, shortest_path, depth, visited_states):
+def get_states(current_state, game, shortest_path, depth):
     if shortest_path < depth:
         return current_state
     #print(f"current_state nr.1 :{current_state}")
@@ -88,15 +89,17 @@ def get_states(current_state, game, shortest_path, depth, visited_states):
         #print(f"\n Unique move given this position: {current_state}, {move}\n")
         temp = game.step(move)
         new_state, done = temp[0], temp[1]
-        if new_state in visited_states:
-            return False
-        else:
-            visited_states.add(new_state)
+
+      
+
         if done:
-            shortest_path = depth
+            if shortest_path > depth:
+                shortest_path = depth
+
             game.reset(current_state)    
             states.append((move, True))
             return states
+        
         states.append((move, get_states(new_state, game, shortest_path, depth + 1)))
         game.reset(current_state)        
         ##print(f"current_state nr.2 :{current_state}")
@@ -104,26 +107,21 @@ def get_states(current_state, game, shortest_path, depth, visited_states):
 
 def unwrap(states, moves, depth, current_solution):
     #print(moves)
-    if depth >= 11:
-        moves.pop(-1)
-    else:
+    if depth < 11:
         if type(states) == bool:
             #print(len(moves), len(current_solution))
-            
             if states == True:
+                #print(moves)
                 if len(current_solution) > len(moves):
-                    print(moves)
+                    
                     current_solution = moves[:]
-                moves.pop(-1)
-                #print(f"\nWe have now poped an element from moves:{moves}\n")
-            else:
-                moves.pop(-1)
+
         else:
             for state in states:
                 moves.append(state[0])
                 current_solution = unwrap(state[1], moves, depth+1, current_solution)
-                if not moves == []:
-                    moves.pop(-1)
+    if moves != []:
+        moves.pop(-1)
     return current_solution    
 
 def main():
@@ -149,10 +147,10 @@ def main():
     [0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0],
-    [1, 2, 3, 3, 2, 1, 2],
-    [3, 2, 1, 1, 1, 2, 3],
-    [3, 3, 2, 1, 3, 3, 3]
+    [0, 0, 0, 4, 4, 4, 1],
+    [0, 0, 0, 3, 3, 1, 2],
+    [0, 0, 0, 4, 1, 2, 3],
+    [0, 0, 0, 4, 3, 3, 3]
     ])
     
     game = FormerGame(original_state, grid_size=(7, 9), num_symbols=4)
@@ -164,29 +162,34 @@ def main():
 
     #games = [([move, move,...], grid)]
 
-    shortest_game = 13
-    visited_states = {}
-    states = get_states(original_state, game, shortest_game, 0, visited_states)
-    #print(states)
+    shortest_game = 15
+    visited_states = set()
+    start_states = time.time()
+    states = get_states(original_state, game, shortest_game, 0)
+    time_states = time.time() - start_states 
 
-
-    #print(states)
+    #for state in states:
+    #    print("\n",state)
 
     
-    
-    current_solution = unwrap(states, [], 0, [0]*13)
+    start_solution = time.time()
+    current_solution = unwrap(states, [], 0, [0]*15)
+    time_solution = time.time() - start_solution
 
-    print(current_solution)
-    print("\n Shortest path to clear the board:")
+    print(f"\n Shortest path to clear the board:{current_solution}")
 
+    print(time_states, time_solution)
     #game.reset(original_state)
     """
     for move in current_solution:
         print(game.grid[move[0],move[1]])
-        new_state= game.step(move)[0]
 
-        print("\n",move,"\n", new_state, "\n")
+        new_state, done= game.step(move)
+        
+
+        print("\n",move,"\n", new_state,done, "\n")
     """
+    
  
 if __name__ == "__main__":
    
