@@ -1,5 +1,7 @@
 import numpy as np
 import time
+from multiprocessing import Pool, Manager
+
 
 class FormerGame:
     def __init__(self,grid, grid_size, num_symbols):
@@ -88,57 +90,57 @@ def find_unique_moves(game):
     return moves
     
 
+def solve_parallel(args):
+    """Helper function for multiprocessing. Solves a sub-problem."""
+    state, game, moves, best_solution, len_best_solution, depth = args
+    return solve(state, game, moves, best_solution, len_best_solution, depth)
 
 def solve(state, game, moves, best_solution, len_best_solution, depth):
+    if depth >= len_best_solution:
+        return best_solution, len_best_solution
 
-    if depth < len_best_solution:
+    unique_moves = find_unique_moves(game)
 
-        for move in find_unique_moves(game):
-            moves.append(move)
-            new_state, done = game.step(move)
+    # Prepare for multiprocessing
+    if depth == 0:  # Only use multiprocessing at the top level
+        with Manager() as manager:
+            shared_best_solution = manager.list(best_solution)
+            shared_len_best_solution = manager.Value('i', len_best_solution)
+            
+            with Pool() as pool:
+                args = [
+                    (state, game, moves + [move], shared_best_solution, shared_len_best_solution.value, depth + 1)
+                    for move in unique_moves
+                ]
+                results = pool.map(solve_parallel, args)
 
-            if done == True:
-                #print([ (int(s[0]), int(s[1])) for s in best_solution], len(best_solution))
-                #i = input()
-                if len(moves) < len_best_solution:
-                    best_solution = moves[:]
-                    len_best_solution = len(best_solution)
-            else:
-                best_solution, len_best_solution = solve(new_state, game, moves, best_solution, len_best_solution, depth + 1)
+            # Consolidate results
+            for result in results:
+                if len(result[0]) < shared_len_best_solution.value:
+                    shared_best_solution[:] = result[0]
+                    shared_len_best_solution.value = len(result[0])
+            
+            return list(shared_best_solution), shared_len_best_solution.value
 
-            #reset for next search
-            game.reset(state)
-            moves.pop()
+    # Without multiprocessing for deeper recursive calls
+    for move in unique_moves:
+        moves.append(move)
+        new_state, done = game.step(move)
 
+        if done:
+            if len(moves) < len_best_solution:
+                best_solution = moves[:]
+                len_best_solution = len(best_solution)
+        else:
+            best_solution, len_best_solution = solve(new_state, game, moves, best_solution, len_best_solution, depth + 1)
+
+        # Reset for the next search
+        game.reset(state)
+        moves.pop()
 
     return best_solution, len_best_solution
 
-def get_states(current_state, game, shortest_path, depth):
-    if shortest_path < depth:
-        return current_state
-    #print(f"current_state nr.1 :{current_state}")
-    states = []
-    for move in find_unique_moves(game):
-        #print(f"\n Unique move given this position: {current_state}, {move}\n")
-        temp = game.step(move)
-        new_state, done = temp[0], temp[1]
 
-      
-
-        if done:
-            if shortest_path > depth:
-                shortest_path = depth
-
-            game.reset(current_state)    
-            states.append((move, True))
-            return states
-        
-        states.append((move, get_states(new_state, game, shortest_path, depth + 1)))
-        game.reset(current_state)        
-        ##print(f"current_state nr.2 :{current_state}")
-    return states
-
-def unwrap(states, moves, depth, current_solution):
     #print(moves)
     if depth < 11:
         if type(states) == bool:
@@ -175,7 +177,7 @@ def main():
     [3, 3, 4, 2, 3, 1, 1]
     ])
     """
-    """
+    
     original_state =  np.array([
     [3, 1, 2, 3, 1, 2, 2],
     [4, 1, 3, 1, 1, 2, 3],
@@ -191,15 +193,15 @@ def main():
     original_state =  np.array([
     [0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 3, 1, 0, 0],
-    [0, 0, 0, 1, 1, 2, 2],
-    [0, 0, 2, 2, 2, 2, 3],
-    [0, 0, 3, 2, 2, 1, 3],
-    [0, 0, 3, 2, 2, 3, 1],
+    [0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 1, 2, 2, 2, 3],
+    [0, 0, 4, 2, 2, 1, 3],
+    [0, 0, 4, 1, 2, 3, 1],
     [0, 0, 2, 3, 2, 2, 1],
-    [0, 0, 2, 4, 3, 3, 4]
+    [0, 0, 1, 4, 3, 3, 4]
     ])
-
+    """
     game = FormerGame(original_state, grid_size=(7, 9), num_symbols=4)
     print("Initial game state:")
     print(original_state)
@@ -210,7 +212,7 @@ def main():
     #games = [([move, move,...], grid)]
     #print(game.get_valid_actions())
 
-    shortest_game = 9
+    shortest_game = 17
     visited_states = set()
 
     
